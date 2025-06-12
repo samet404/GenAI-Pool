@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GAIS client</title>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-gray-50 h-screen">
+    <!-- Prompt Drawer -->
+    <div
+      id="prompt-drawer"
+      class="fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform translate-x-full transition-transform duration-300 ease-in-out z-50"
+    >
+      <div class="p-6 border-b border-gray-200">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-bold text-gray-800">Pre-built Prompts</h2>
+          <button
+            onclick="togglePromptDrawer()"
+            class="text-gray-500 hover:text-gray-700"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="p-6 space-y-4 overflow-y-auto h-full">
+        <button
+          onclick="rickRoll()"
+          class="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          way to earn money on the internet
+        </button>
+
+        <button
+          onclick="usePrompt('Your task is to fix the grammer in the given text.\nPlease don\'t add any extra text. Don\'t change meaning of text. Don\'t add your comments to response. Only fix the grammer.\nYour responses shouldn\'t start and end with quotes.\Text:')"
+          class="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          Fix grammer
+        </button>
+
+        <button
+          onclick="usePrompt('Your task is to change persona in the given text. Don\'t change general meaning of text.\nYour responses shouldn\'t start and end with quotes.\Persona definition:\nText:')"
+          class="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          Change persona
+        </button>
+
+        <button
+          onclick="usePrompt('Your task is to change persona in the given text. Don\'t change general meaning of text.\nYour responses shouldn\'t start and end with quotes.\nPersona definition: You are angry person who lose the video game.\nText: But I thought we had to be at the restaurant by 7:30 for the surprise party. We’ll never make it there with all this evening traffic.')"
+          class="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          Change persona (pre-built)
+        </button>
+
+        <button
+          onclick="usePrompt('Your task is to generate tags based on provided text.\nTags should be separated with commas with no space. Your response shouldn\'t start and end with quotes.\nText: ')"
+          class="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          Generate tags
+        </button>
+
+        <button
+          onclick="usePrompt('Your task is to generate tags based on provided text.\nTags should be separated with commas with no space. Your response shouldn\'t start and end with quotes.\nText: But I thought we had to be at the restaurant by 7:30 for the surprise party. We’ll never make it there with all this evening traffic.')"
+          class="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          Generate tags (pre-built)
+        </button>
+
+        <button
+          onclick="usePrompt('Your task is to generate tags that represents possible target audience of provided text.\nTags should be separated with commas with no space. Your response shouldn\'t start and end with quotes.\Example response with irrelevant tags: People interested in history,Students of computer science,Mathematicians,People interested in Alan Turing,People interested in algorithms,People interested in cryptography,Logicians,Philosophers,Biologists,People interested in theoretical biology \nText:')"
+          class="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          Target audience
+        </button>
+
+        <button
+          onclick="usePrompt('Your task is to generate tags that represents possible target audience of provided text.\nTags should be separated with commas with no space. Your response shouldn\'t start and end with quotes.\Example response with irrelevant tags: People interested in history,Students of computer science,Mathematicians,People interested in Alan Turing,People interested in algorithms,People interested in cryptography,Logicians,Philosophers,Biologists,People interested in theoretical biology \nText: Alan Mathison Turing (/ˈtjʊərɪŋ/; 23 June 1912 – 7 June 1954) was an English mathematician, computer scientist, logician, cryptanalyst, philosopher and theoretical biologist. He was highly influential in the development of theoretical computer science, providing a formalisation of the concepts of algorithm and computation with the Turing machine, which can be considered a model of a general-purpose computer. Turing is widely considered to be the father of theoretical computer science')"
+          class="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          Target audience of Alan turing (pre-built)
+        </button>
+
+        <button
+          onclick="usePrompt('Your task is to generate tags that represents possible target audience of provided text.\nTags should be separated with commas with no space. Your response shouldn\'t start and end with quotes.\Example response with irrelevant tags: People interested in history,Students of computer science,Mathematicians,People interested in Alan Turing,People interested in algorithms,People interested in cryptography,Logicians,Philosophers,Biologists,People interested in theoretical biology \nText: The dog (Canis familiaris or Canis lupus familiaris) is a domesticated descendant of the gray wolf. Also called the domestic dog, it was selectively bred from a population of wolves during the Late Pleistocene by hunter-gatherers. The dog was the first species to be domesticated by humans, over 14,000 years ago and before the development of agriculture. Due to their long association with humans, dogs have gained the ability to thrive on a starch-rich diet that would be inadequate for other canids.')"
+          class="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          Target audience of Dog (pre-built)
+        </button>
+
+        <button
+          onclick="usePrompt('Your task is to expand given text.\nDon\'t change meaning of text. Don\'t add your comments to response. Your responses shouldn\'t start and end with quotes.\Text:')"
+          class="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          Expand text
+        </button>
+      </div>
+    </div>
+
+    <div
+      class="h-screen w-full flex flex-col bg-white rounded-2xl shadow-lg overflow-hidden"
+    >
+      <!-- Header -->
+      <div
+        class="p-6 border-b border-gray-200 bg-white flex items-center justify-between gap-4"
+      >
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800">Bloomia GAIS</h1>
+          <p>Your chat history is not included in prompt.</p>
+          <div class="text-purple-600 text-sm pt-2" id="response-time"></div>
+        </div>
+        <div class="flex items-center gap-4">
+          <button
+            onclick="togglePromptDrawer()"
+            class="px-4 py-2 text-purple-600 border-2 border-purple-600 rounded-xl hover:bg-purple-50 transition-all"
+          >
+            Prompts
+          </button>
+          <select
+            id="model"
+            class="w-48 px-4 py-2 border-2 border-gray-200 rounded-xl bg-white text-sm focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-200 transition-all"
+          >
+            <option value="gemma-3-27b-it">Gemma 27B</option>
+            <option value="gemma-3-1b-it">gemma-3-1b-it</option>
+            <option value="gemma-3-4b-it">gemma-3-4b-it</option>
+            <option value="gemma-3-12b-it">gemma-3-12b-it</option>
+            <option value="gemma-3n-e4b-it">gemma-3n-e4b-it</option>
+            <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+            <option value="gemini-2.5-pro-preview-06-05">
+              Gemini 2.5 Pro Preview
+            </option>
+            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Rest of the previous content remains the same -->
+      <!-- Chat History -->
+      <div
+        id="chat-history"
+        class="flex flex-col grow h-full overflow-y-auto p-6 bg-gray-50 space-y-6"
+      ></div>
+
+      <!-- Input Area -->
+      <div class="p-3 bg-white border-t border-gray-200">
+        <div class="w-full flex gap-4 items-end">
+          <textarea
+            id="prompt"
+            class="flex-1 px-4 py-3 w-full border-2 border-gray-200 rounded-xl min-h-[10rem] max-h-[150px] focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-200 transition-all"
+            placeholder="Type your message here..."
+            rows="1"
+          ></textarea>
+          <div class="flex flex-col gap-2">
+            <button
+              id="clear-btn"
+              onclick="onClear()"
+              class="px-6 py-3 h-full bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transform hover:-translate-y-0.5 active:translate-y-0.5 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              Clear
+            </button>
+            <button
+              id="send-btn"
+              onclick="sendPrompt()"
+              class="px-6 py-3 h-full bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transform hover:-translate-y-0.5 active:translate-y-0.5 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:transform-none disabled:opacity-50"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let sentAt = null;
+      const sendBtn = document.getElementById('send-btn');
+      const clearBtn = document.getElementById('clear-btn');
+
+      const rickRoll = () => {
+        const a = document.createElement('a');
+        a.target = '_blank';
+        a.href = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+        a.click();
+      };
+
+      const socket = io({
+        path: '/socket.io',
+        cors: {
+          origin: '*',
+        },
+      });
+      const chatHistory = document.getElementById('chat-history');
+      let currentResponse = '';
+      let conversationHistory = [];
+
+      // Auto-resize textarea
+      const textarea = document.getElementById('prompt');
+      textarea.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+      });
+
+      socket.on('stream', (chunk) => {
+        currentResponse += chunk;
+        updateLastAiMessage(currentResponse);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+      });
+
+      socket.on('stream-done', () => {
+        setTimeout(() => {
+          currentResponse = '';
+          document.querySelector('button').disabled = false;
+          document.getElementById('prompt').disabled = false;
+
+          sendBtn.disabled = false;
+          clearBtn.disabled = false;
+        }, 100);
+
+        document.getElementById('response-time').innerHTML =
+          `Took ${performance.now() - sentAt}ms to generate response.`;
+      });
+
+      function createMessageElement(content, isUser) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `max-w-[70%] p-4 rounded-2xl ${
+          isUser
+            ? 'bg-purple-600 text-white ml-auto rounded-br-lg'
+            : 'bg-gray-100 text-gray-800 mr-auto rounded-bl-lg'
+        }`;
+        messageDiv.textContent = content;
+
+        conversationHistory.push({
+          role: isUser ? 'Human' : 'Assistant',
+          content: content,
+        });
+
+        return messageDiv;
+      }
+
+      function updateLastAiMessage(content) {
+        const lastMessage = chatHistory.lastElementChild;
+        if (lastMessage && lastMessage.classList.contains('bg-gray-100')) {
+          lastMessage.textContent = content;
+          conversationHistory[conversationHistory.length - 1].content = content;
+        } else {
+          chatHistory.appendChild(createMessageElement(content, false));
+        }
+      }
+
+      function onClear() {
+        const promptInput = document.getElementById('prompt');
+        promptInput.value = '';
+        promptInput.style.height = 'auto';
+        conversationHistory = [];
+        chatHistory.innerHTML = '';
+      }
+
+      function sendPrompt() {
+        const promptInput = document.getElementById('prompt');
+        const prompt = promptInput.value.trim();
+        const model = document.getElementById('model').value;
+
+        if (!prompt) return;
+
+        sendBtn.disabled = true;
+        clearBtn.disabled = true;
+
+        chatHistory.appendChild(createMessageElement(prompt, true));
+        currentResponse = '';
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        // let fullPrompt = `
+        //   <system-instructions>
+        //   You are a helpful assistant that answers questions. If available, use the provided chat history to answer the question.
+
+        //   Chat history is provided between <history> tags. Human is the user and Assistant is the AI which means you are the Assistant.
+        //   </system-instructions>
+        //   <history>
+        //   ${conversationHistory.map((msg) => `${msg.role}: ${msg.content}`).join('\n')}
+
+        //   Human: ${prompt}
+        //   </history>
+        // `;
+
+        socket.emit(
+          '/req-stream',
+          JSON.stringify({
+            prompt: prompt,
+            model: model,
+          })
+        );
+
+        sentAt = performance.now();
+        promptInput.value = '';
+        promptInput.style.height = 'auto';
+      }
+
+      document.getElementById('prompt').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendPrompt();
+        }
+      });
+
+      window.onload = () => {
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+      };
+
+      function togglePromptDrawer() {
+        const drawer = document.getElementById('prompt-drawer');
+        const overlay = document.getElementById('overlay');
+        drawer.classList.toggle('translate-x-full');
+        overlay.classList.toggle('hidden');
+      }
+
+      function usePrompt(promptText) {
+        const promptInput = document.getElementById('prompt');
+        promptInput.value = promptText;
+        promptInput.style.height = 'auto';
+        promptInput.style.height = promptInput.scrollHeight + 'px';
+        togglePromptDrawer();
+      }
+    </script>
+  </body>
+</html>

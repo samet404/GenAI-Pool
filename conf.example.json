@@ -1,0 +1,10 @@
+{
+  "api_keys": [
+    "KEY_HERE"
+  ],
+  "port": 5000,
+  "health_check": true,
+  "cors_origins": "*",
+  "lazy_load": false,
+  "allow_clients": true
+}
