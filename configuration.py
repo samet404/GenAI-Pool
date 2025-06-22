@@ -1,18 +1,36 @@
 import json
-from typing import Dict, Any
+import os
+from typing import Set
+from pydantic import BaseModel
+from constants import GoogleModel
 
-# Replace 'file_path.json' with your actual JSON file path
-with open('conf.json', 'r') as file:
-    jsonfile = json.load(file)  # Use json.load() for files, not json.loads()
+class PoolConfig(BaseModel):
+    # Google's models to use.
+    # First one is will be first used and the rest will be used in case of failure.
+    models_to_use: list[GoogleModel]
+    # Whether to check the API keys is working or not
+    health_check: int
+    # API keys to use for the Gemini Pool
+    api_keys: list[str]
+    # Whether to lazy load the clients or not. If set to True, the clients will be loaded only when needed.
+    lazy_load: bool
 
-if (not 'api_keys' in jsonfile):
-    raise ValueError("Missing 'api_keys' key in JSON file")
+class Configuration(BaseModel):
+    cors_origins: str
+    allow_clients: bool
+    pool_config: PoolConfig
+    redis_host: str
+    redis_port: int
+    redis_pass: str
+    port: int
 
-conf: Dict[str, Any] = {
-    "api_keys": jsonfile['api_keys'],
-    "port": jsonfile['port'] if 'port' in jsonfile else 4000,
-    "health_check": jsonfile['health_check'] if 'health_check' in jsonfile else True,
-    "cors_origins": jsonfile['cors_origins'],
-    "lazy_load": jsonfile['lazy_load'] if 'lazy_load' in jsonfile else False,
-    "allow_clients": jsonfile['allow_clients'] if 'allow_clients' in jsonfile else True
-}
+current_dir = os.path.dirname(os.path.abspath(__file__))
+config_path = os.path.join(current_dir, 'conf.json')
+
+with open(config_path, 'r') as file:
+    jsonfile = file.read()  # Use json.load() for files, not json.loads()
+
+if jsonfile is None:
+    raise ValueError("Missing 'conf.json' file. You can create new one by copying 'conf.example.json' to 'conf.json'")
+
+conf: Configuration = Configuration.model_validate_json(jsonfile)

@@ -1,10 +1,22 @@
 {
-  "api_keys": [
-    "KEY_HERE"
-  ],
-  "port": 5000,
-  "health_check": true,
+  "pool_config": {
+    "api_keys": [
+      "KEY_HERE"
+    ],
+    "health_check": false,
+    "models_to_use": [
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-lite",
+      "gemini-1.5-pro",
+      "gemma-3-27b-it"
+    ],
+    "lazy_load": true
+  },
+  "port": 5500,
+  "allow_clients": false,
   "cors_origins": "*",
-  "lazy_load": false,
-  "allow_clients": true
+  "redis_port": 6860,
+  "redis_pass": "yrELK8bIeRaO8Va2LU2ibwG00IpcYIe8tyWfjDkmn8lUq106QGnlI2Cfg4fWOJhP",
+  "redis_host": "localhost"
 }
