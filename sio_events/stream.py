@@ -1,27 +1,23 @@
 import json
 import logging
-from datetime import time
-import time as real_time
-
+import eventlet
 from flask_socketio import SocketIO
 from google import genai
 from pydantic import BaseModel
 from Logger import logger
 from Pool import Pool
-from data_representation import ModelInfo
-
 
 class Input(BaseModel):
     prompt: str
     sio_event: str
     metadata: str | None = None
 
-def stream(input, io: SocketIO, pool: Pool, session_id: str):
+def handle_event(input, io: SocketIO, pool: Pool, session_id: str):
     try:
-        logging.info(f"req-stream requested: {input} from {session_id}")
+        for i in range(10):
+            logging.info(f"req-stream requested from {session_id} |  {input} ")
         input = json.loads(str(input))
         input = Input(**input)
-        logging.info("1")
 
         pool.update_index()
         index = pool.current_index
@@ -30,32 +26,28 @@ def stream(input, io: SocketIO, pool: Pool, session_id: str):
         model = pool.choose_model_to_use(api_key)
         logging.info("2")
 
-        async def generate_response():
-            logging.info("3")
-
+        def generate_response():
             for chunk in pool.getResponseStream(contents=input.prompt, client=client, api_key=api_key,
                                                 model=model):
                 if hasattr(chunk, "text"):
-                    logging.info("4")
-
                     emit_data = json.dumps({
                         "chunk": chunk.text,
                         "metadata": input.metadata,
                         "model": model,
                     })
+                    for i in range(10):
+                        logging.info(f"stream sending to {session_id} | {input} ")
 
                     io.emit(input.sio_event, emit_data, namespace='/', to=session_id)
-                    io.sleep(1)
-
-        logging.info("5")
+                    io.sleep(0)
 
         try_count = 0
         while True:
             try:
-                logging.info("5")
                 generate_response()
                 break
             except Exception as e:
+                io.sleep(2)
                 try_count += 1
                 logger.error(f'Error in req-stream route in while loop - {str(e)}')
                 if try_count > 30:
@@ -77,6 +69,8 @@ def stream_route(
         pool: Pool,
         session_id: str
 ):
+    for i in range(10):
+        logging.info(f"Stream route registered for session {session_id}")
     @io.on('req-stream', namespace='/')
     def stream(input):
-        io.start_background_task(stream, input, io, pool, session_id)
+        eventlet.spawn(handle_event, input, io, pool, session_id)

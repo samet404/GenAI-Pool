@@ -6,6 +6,7 @@ from flask_socketio import SocketIO, join_room
 from Pool import Pool
 from sio_events.stream import stream_route
 
+connected_clients = set()
 
 def sio_on_connect(socketio: SocketIO, pool: Pool):
     @socketio.on('connect', namespace='/')
@@ -14,10 +15,7 @@ def sio_on_connect(socketio: SocketIO, pool: Pool):
             # ==============================================================================
             # INITIALIZE STATES
             # ==============================================================================
-            # Get the client's session ID
             session_id = request.sid
-            if session_id is None:
-                raise Exception('No session ID found')
 
             logging.info(f"Client connected: {session_id}")
             join_room(session_id)

@@ -2,14 +2,13 @@ import json
 import logging
 import traceback
 from datetime import datetime
-from typing import List, TypeVar
+from typing import List, Dict
+
+from engineio.async_drivers import eventlet
 from google import genai
 from configuration import PoolConfig
 from constants import GENAI_QUOTAS, GoogleModel
-from data_representation import ModelInfo
 from db.redisdb import redis_db
-
-
 
 class Pool:
     def __init__(self, pool_config: PoolConfig):
@@ -22,6 +21,9 @@ class Pool:
         self.current_index = -1
         # List of clients that are used to generate responses
         self.clients: List[genai.Client] = []
+
+        self.last_used_models: Dict[str, str] = {}
+        self.last_used_model_cache_count: Dict[str, int] = {}
 
         if not pool_config.lazy_load:
             for api_key in pool_config.api_keys:
@@ -66,11 +68,15 @@ class Pool:
 
 
     # This function chooses the model to use based on the usage of the models
-    # Function also updates values in redis
     # First it checks RPD, RPM and then TPM
     # Function always tries to choose the first available models that preferred by the user
     # If none of the models are not available, it returns none to indicate that api key is rate-limited and cannot be used at the moment
     def choose_model_to_use(self, api_key: str):
+        if api_key in self.last_used_model_cache_count:
+            if self.last_used_model_cache_count[api_key] <= 10:
+                self.last_used_model_cache_count[api_key] += 1
+                return self.last_used_models[api_key]
+
         model_to_use = None
 
         for model in self.models_to_use:
@@ -106,6 +112,8 @@ class Pool:
                     logging.info(f"Client {api_key} has reached TPM limit for model {model}")
                     continue
 
+            self.last_used_model_cache_count[api_key] = 1
+            self.last_used_models[api_key] = model
             model_to_use = model
             break
 
@@ -128,14 +136,23 @@ class Pool:
 
         current_date = datetime.now()
 
-        redis_db.incr(f"aipool:api_key:{api_key}:client_usage:model:{model}:requests_per_day:date:{current_date.year}-{current_date.month}-{current_date.day}")
-        redis_db.incr(
-            f"aipool:api_key:{api_key}:client_usage:model:{model}:requests_per_minute:date:{current_date.year}-{current_date.month}-{current_date.day}-{current_date.hour}-{current_date.minute}")
+        def add_usage_to_redis():
+            redis_db.incr(
+                f"aipool:api_key:{api_key}:client_usage:model:{model}:requests_per_day:date:{current_date.year}-{current_date.month}-{current_date.day}")
+            redis_db.incr(
+                f"aipool:api_key:{api_key}:client_usage:model:{model}:requests_per_minute:date:{current_date.year}-{current_date.month}-{current_date.day}-{current_date.hour}-{current_date.minute}")
+
+
+        eventlet.spawn(add_usage_to_redis)
 
         for chunk in stream:
-            current_date = datetime.now()
-           #  redis_db.incr(
-            #    f"aipool:api_key:{api_key}:client_usage:model:{model}:tokens_per_minute:date:{current_date.year}-{current_date.month}-{current_date.day}-{current_date.hour}-{current_date.minute}",
-             #   chunk.usage_metadata.prompt_token_count
-            #)
+            def add_usage_to_redis():
+                current_date = datetime.now()
+                redis_db.incr(
+                    f"aipool:api_key:{api_key}:client_usage:model:{model}:tokens_per_minute:date:{current_date.year}-{current_date.month}-{current_date.day}-{current_date.hour}-{current_date.minute}",
+                    chunk.usage_metadata.prompt_token_count
+                )
+
+            eventlet.spawn(add_usage_to_redis)
+
             yield chunk

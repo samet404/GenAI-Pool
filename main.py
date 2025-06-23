@@ -5,7 +5,6 @@ from Logger import logger
 from configuration import conf
 from Pool import Pool
 from sio_events.on_connect import sio_on_connect
-from sio_events.stream import stream_route
 from flask_socketio import SocketIO, join_room
 from flask_cors import CORS
 
@@ -17,7 +16,8 @@ def create_app():
         cors_allowed_origins=conf.cors_origins,
         async_mode='eventlet',
         logger=True,
-        engineio_logger=True
+        engineio_logger=True,
+        manage_session=False,
     )
     pool = Pool(conf.pool_config)
     CORS(app, resources={r"/*": {"origins": conf.cors_origins}})
@@ -42,5 +42,6 @@ if __name__ == '__main__':
         app=app,
         host='0.0.0.0',  # Add this if you need external access
         port=conf.port,
-        debug=True  # Set to False in production
+        debug=True,  # Set to False in production,
+
     )
