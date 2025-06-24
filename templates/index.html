@@ -123,68 +123,78 @@
 >
     <!-- Header -->
     <!-- Update the header div -->
-    <div id="header" class="p-6 border-b border-gray-200 bg-white flex items-center justify-between gap-4">
+    <!-- Header changes -->
+    <div id="header" class="p-4 border-b border-gray-200 bg-white flex items-center justify-between gap-2">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800">GENAI POOL CLIENT</h1>
-            <p>Your chat history is not included in prompt.</p>
-            <div class="text-purple-600 text-sm pt-2" id="response-time"></div>
+            <h1 class="text-xl font-bold text-gray-800">GENAI POOL CLIENT</h1>
+            <p class="text-sm">Your chat history is not included in prompt.</p>
+            <div class="text-purple-600 text-xs pt-1" id="response-time"></div>
         </div>
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
             <button
                     onclick="togglePromptDrawer()"
-                    class="px-4 py-2 text-purple-600 border-2 border-purple-600 rounded-xl hover:bg-purple-50 transition-all"
+                    class="px-3 py-1 text-sm text-purple-600 border-2 border-purple-600 rounded-lg hover:bg-purple-50 transition-all"
             >
                 Prompts
-            </button>
-            <button
-                    onclick="toggleHeader()"
-                    class="p-2 text-gray-500 hover:text-gray-700"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                     stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                </svg>
             </button>
         </div>
     </div>
 
-    <!-- Rest of the previous content remains the same -->
-    <!-- Chat History -->
-    <div
-            id="chat-history"
-            class="flex flex-col grow h-full overflow-y-auto p-6 bg-gray-50 space-y-6"
-    ></div>
+    <!-- Prompt drawer changes -->
+    <div class="p-4 border-b border-gray-200">
+        <div class="flex justify-between items-center">
+            <h2 class="text-lg font-bold text-gray-800">Pre-built Prompts</h2>
+        </div>
+    </div>
 
-    <!-- Input Area -->
-    <div class="p-3 bg-white border-t border-gray-200">
-        <div class="w-full flex gap-4 items-end">
-          <textarea
-                  id="prompt"
-                  class="flex-1 px-4 py-3 w-full border-2 border-gray-200 rounded-xl min-h-[10rem] max-h-[150px] focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-200 transition-all"
-                  placeholder="Type your message here..."
-                  rows="1"
-          ></textarea>
-            <div class="flex flex-col gap-2">
+    <!-- Chat messages -->
+    <div id="chat-history" class="flex flex-col grow h-full overflow-y-auto p-4 bg-gray-50 space-y-4"></div>
+
+    <!-- Input area -->
+    <div class="p-2 bg-white border-t border-gray-200">
+        <div class="w-full flex gap-2 items-end">
+        <textarea
+                id="prompt"
+                class="flex-1 px-3 py-2 w-full border-2 border-gray-200 rounded-lg min-h-[6rem] max-h-[100px] focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-200 transition-all text-sm"
+                placeholder="Type your message here..."
+                rows="1"
+        ></textarea>
+            <div class="flex flex-col gap-1">
                 <button
                         id="clear-btn"
                         onclick="onClear()"
-                        class="px-6 py-3 h-full bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transform hover:-translate-y-0.5 active:translate-y-0.5 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:transform-none"
+                        class="px-4 py-2 text-sm bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                     Clear
                 </button>
                 <button
                         id="send-btn"
                         onclick="sendPrompt()"
-                        class="px-6 py-3 h-full bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transform hover:-translate-y-0.5 active:translate-y-0.5 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:transform-none disabled:opacity-50"
+                        class="px-4 py-2 text-sm bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     Send
+                </button>
+                <button
+                        id="simulate-btn"
+                        onclick="simulateChat()"
+                        class="px-4 py-2 text-sm bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    Simulate
                 </button>
             </div>
         </div>
     </div>
 </div>
-
 <script>
+    let allowSend = false;
+
+    function simulateChat() {
+        setInterval(() => {
+           document.getElementById('prompt').value = "Your task is to fix the grammer in the given text.\nPlease don't add any extra text. Don't change meaning of text. Don't add your comments to response. Only fix the grammer.\nYour responses shouldn't start and end with quotes.\Text:";
+           sendPrompt();
+        }, 1000);
+    }
+
     function toggleHeader() {
       const header = document.getElementById('header');
       header.style.display = 'none';
@@ -200,6 +210,17 @@
         origin: '*',
       },
     });
+
+    socket.on('stream:error', (data) => {
+        console.error(data);
+        allowSend = true;
+    })
+
+    socket.on('connect', () => {
+       console.log('Connected to server');
+        allowSend = true;
+    });
+
     const chatHistory = document.getElementById('chat-history');
     let currentResponse = '';
     let conversationHistory = [];
@@ -212,6 +233,8 @@
     });
 
     socket.on('stream', (chunk) => {
+      allowSend = false;
+      console.log("chunk")
       const chunkJSON = JSON.parse(chunk);
       console.log(chunkJSON)
       currentResponse += chunkJSON.chunk;
@@ -219,8 +242,11 @@
       chatHistory.scrollTop = chatHistory.scrollHeight;
     });
 
-    socket.on('stream:success', () => {
+    socket.on('stream:success', (data) => {
+      console.log("stream success", data)
+
       setTimeout(() => {
+        allowSend = true;
         currentResponse = '';
         document.querySelector('button').disabled = false;
         document.getElementById('prompt').disabled = false;
@@ -269,6 +295,8 @@
     }
 
     function sendPrompt() {
+    if (!allowSend) return;
+    allowSend = false;
       const promptInput = document.getElementById('prompt');
       const prompt = promptInput.value.trim();
 
@@ -305,17 +333,17 @@
       chatHistory.scrollTop = chatHistory.scrollHeight;
     };
 
-// Replace the existing togglePromptDrawer function with this simpler version
-function togglePromptDrawer() {
-const drawer = document.getElementById('prompt-drawer');
-drawer.classList.toggle('translate-x-full');
-}
-    function usePrompt(promptText) {
-      const promptInput = document.getElementById('prompt');
-      promptInput.value = promptText;
-      promptInput.style.height = 'auto';
-      promptInput.style.height = promptInput.scrollHeight + 'px';
-      togglePromptDrawer();
+    // Replace the existing togglePromptDrawer function with this simpler version
+    function togglePromptDrawer() {
+    const drawer = document.getElementById('prompt-drawer');
+    drawer.classList.toggle('translate-x-full');
+    }
+        function usePrompt(promptText) {
+          const promptInput = document.getElementById('prompt');
+          promptInput.value = promptText;
+          promptInput.style.height = 'auto';
+          promptInput.style.height = promptInput.scrollHeight + 'px';
+          togglePromptDrawer();
     }
 </script>
 </body>

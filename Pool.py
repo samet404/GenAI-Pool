@@ -72,6 +72,7 @@ class Pool:
     # Function always tries to choose the first available models that preferred by the user
     # If none of the models are not available, it returns none to indicate that api key is rate-limited and cannot be used at the moment
     def choose_model_to_use(self, api_key: str):
+        # We are using a cache to avoid checking the same model multiple times
         if api_key in self.last_used_model_cache_count:
             if self.last_used_model_cache_count[api_key] <= 10:
                 self.last_used_model_cache_count[api_key] += 1
@@ -87,30 +88,42 @@ class Pool:
 
             current_date = datetime.now()
 
-            # Get and decode Redis values
+            # ==============================================================================
+            # CHECK IF MODEL IS RATE LIMITED
+            # ==============================================================================
+
             req_per_day =  redis_db.get(
                 f"aipool:api_key:{api_key}:client_usage:model:{model}:requests_per_day:date:{current_date.year}-{current_date.month}-{current_date.day}")
             if req_per_day is not None:
                 req_per_day = int(req_per_day.decode('utf-8'))
+                logging.debug(f"RPD for model {model} and API key {self.api_keys.index(api_key)} is {req_per_day}")
                 if req_per_day >= GENAI_QUOTAS[model]["RPD"]:
-                    logging.info(f"Client {api_key} has reached RPD limit for model {model}")
+                    logging.debug(f"Client {api_key} has reached RPD limit for model {model}")
                     continue
+            else:
+                logging.debug(f"RPD not found for model {model} and API key {self.api_keys.index(api_key)}")
 
             req_per_min =  redis_db.get(
                 f"aipool:api_key:{api_key}:client_usage:model:{model}:requests_per_minute:date:{current_date.year}-{current_date.month}-{current_date.day}-{current_date.hour}-{current_date.minute}")
             if req_per_min is not None:
                 req_per_min = int(req_per_min.decode('utf-8'))
+                logging.debug(f"RPM for model {model} and API key {self.api_keys.index(api_key)} is {req_per_min}")
                 if req_per_min >= GENAI_QUOTAS[model]["RPM"]:
-                    logging.info(f"Client {api_key} has reached RPM limit for model {model}")
+                    logging.debug(f"Client {api_key} has reached RPM limit for model {model}")
                     continue
+            else:
+                logging.debug(f"RPM not found for model {model} and API key {self.api_keys.index(api_key)}")
 
             tokens_per_min =  redis_db.get(
                 f"aipool:api_key:{api_key}:client_usage:model:{model}:tokens_per_minute:date:{current_date.year}-{current_date.month}-{current_date.day}-{current_date.hour}-{current_date.minute}")
             if tokens_per_min is not None:
+                logging.debug(f"TPM for model {model} and API key {self.api_keys.index(api_key)} is {tokens_per_min}")
                 tokens_per_min = int(tokens_per_min.decode('utf-8'))
                 if tokens_per_min >= GENAI_QUOTAS[model]["TPM"]:
-                    logging.info(f"Client {api_key} has reached TPM limit for model {model}")
+                    logging.debug(f"Client {api_key} has reached TPM limit for model {model}")
                     continue
+            else:
+                logging.debug(f"TPM not found for model {model} and API key {self.api_keys.index(api_key)}")
 
             self.last_used_model_cache_count[api_key] = 1
             self.last_used_models[api_key] = model
@@ -139,6 +152,9 @@ class Pool:
         def add_usage_to_redis():
             redis_db.incr(
                 f"aipool:api_key:{api_key}:client_usage:model:{model}:requests_per_day:date:{current_date.year}-{current_date.month}-{current_date.day}")
+            updated_value = redis_db.get(
+                f"aipool:api_key:{api_key}:client_usage:model:{model}:requests_per_day:date:{current_date.year}-{current_date.month}-{current_date.day}")
+            logging.debug(f"THIS SHOULDN'T BE NONE OR SMTH: {updated_value}")
             redis_db.incr(
                 f"aipool:api_key:{api_key}:client_usage:model:{model}:requests_per_minute:date:{current_date.year}-{current_date.month}-{current_date.day}-{current_date.hour}-{current_date.minute}")
 

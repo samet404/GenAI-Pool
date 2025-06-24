@@ -4,6 +4,8 @@ from logging.handlers import RotatingFileHandler
 import os
 import glob
 
+from configuration import conf
+
 # Get the project directory (one level up from the current file)
 project_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -52,7 +54,7 @@ console_handler.setFormatter(colorlog.ColoredFormatter(
 logger = logging.getLogger()
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
-logger.setLevel(logging.INFO)
+logger.setLevel(conf.log_level)
 
 logger.propagate = False
 

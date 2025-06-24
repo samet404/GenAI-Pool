@@ -1,11 +1,9 @@
-from typing import Literal, Set
 from flask import Flask, render_template, request
-from pydantic import BaseModel
 from Logger import logger
 from configuration import conf
 from Pool import Pool
-from sio_events.on_connect import sio_on_connect
-from flask_socketio import SocketIO, join_room
+from sio_events.socketio_routes import socketio_routes
+from flask_socketio import SocketIO
 from flask_cors import CORS
 
 def create_app():
@@ -17,7 +15,6 @@ def create_app():
         async_mode='eventlet',
         logger=True,
         engineio_logger=True,
-        manage_session=False,
     )
     pool = Pool(conf.pool_config)
     CORS(app, resources={r"/*": {"origins": conf.cors_origins}})
@@ -29,7 +26,7 @@ def create_app():
         else:
             return 404
 
-    sio_on_connect(socketio, pool)
+    socketio_routes(socketio, pool)
     logger.info('App created successfully.')
 
     return app, socketio
@@ -37,11 +34,10 @@ def create_app():
 app, socketio = create_app()
 
 if __name__ == '__main__':
-    logger.info('Starting Flask server at http://localhost:' + str(conf.port))
+    logger.info('Starting Flask server at http://127.0.0.1:' + str(conf.port))
     socketio.run(
         app=app,
         host='0.0.0.0',  # Add this if you need external access
         port=conf.port,
-        debug=True,  # Set to False in production,
-
+        debug=True,
     )

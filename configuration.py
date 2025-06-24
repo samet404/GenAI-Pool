@@ -1,6 +1,4 @@
-import json
 import os
-from typing import Set
 from pydantic import BaseModel
 from constants import GoogleModel
 
@@ -23,6 +21,8 @@ class Configuration(BaseModel):
     redis_port: int
     redis_pass: str
     port: int
+    # 0 = NOTSET, 10 = DEBUG, 20 = INFO, 30 = WARNING, 40 = ERROR, 50 = CRITICAL
+    log_level: int
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(current_dir, 'conf.json')
